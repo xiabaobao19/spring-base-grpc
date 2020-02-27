@@ -5,9 +5,9 @@
 ## 此项目主要使用方式
 ### client
 * 配置 
-** spring.grpc.servers: "[{server:'user',host:'127.0.0.1',port:'6566',serverPackages:'com.anoyi.grpc.facade.service'},{server:'supplier',host:'127.0.0.1',port:'6565',serverPackages:'com.xencio.supplier.service'}]"
-** spring.grpc.serverPackages: com.anoyi.grpc.facade.service,com.xencio.supplier.service
-** spring.grpc.enable: true
+* spring.grpc.servers: "[{server:'user',host:'127.0.0.1',port:'6566',serverPackages:'com.anoyi.grpc.facade.service'},{server:'supplier',host:'127.0.0.1',port:'6565',serverPackages:'com.xencio.supplier.service'}]"
+* spring.grpc.serverPackages: com.anoyi.grpc.facade.service,com.xencio.supplier.service
+* spring.grpc.enable: true
 ## server
 * spring.grpc.enable:true
 * spring.grpc.port:6565
