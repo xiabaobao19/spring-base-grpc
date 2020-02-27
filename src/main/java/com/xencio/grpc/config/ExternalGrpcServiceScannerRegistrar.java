@@ -73,7 +73,7 @@ public class ExternalGrpcServiceScannerRegistrar implements BeanFactoryAware, Im
     @Override
     public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
         ((DefaultListableBeanFactory) beanFactory).registerSingleton("grpcProperties", this.grpcProperties);
-        if (!server) {
+        if (server) {
             ClassPathBeanDefinitionScanner scanner = new ClassPathGrpcServiceScanner(registry);
             scanner.setResourceLoader(this.resourceLoader);
             scanner.addIncludeFilter(new MyTypeFilter());
