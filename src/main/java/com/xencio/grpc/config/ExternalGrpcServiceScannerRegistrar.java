@@ -32,6 +32,7 @@ import org.springframework.util.CollectionUtils;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 手动扫描 @GrpcService 注解的接口，
@@ -47,9 +48,6 @@ public class ExternalGrpcServiceScannerRegistrar implements BeanFactoryAware, Im
 
     private ResourceLoader resourceLoader;
 
-    private String serverPackages;
-
-    private Boolean server;
 
     private GrpcProperties grpcProperties;
 
@@ -73,27 +71,25 @@ public class ExternalGrpcServiceScannerRegistrar implements BeanFactoryAware, Im
     @Override
     public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
         ((DefaultListableBeanFactory) beanFactory).registerSingleton("grpcProperties", this.grpcProperties);
-        if (server) {
             ClassPathBeanDefinitionScanner scanner = new ClassPathGrpcServiceScanner(registry);
             scanner.setResourceLoader(this.resourceLoader);
             scanner.addIncludeFilter(new MyTypeFilter());
-            Set<BeanDefinition> beanDefinitions = scanPackages(importingClassMetadata, scanner);//扫描器获取的包含又@GrpcService 注解的类
+            Set<BeanDefinition> beanDefinitions = scanPackages(scanner);//扫描器获取的包含又@GrpcService 注解的类
             ProxyUtil.registerBeans(beanFactory, beanDefinitions);
-        }
     }
 
     /**
      * 包扫描
      */
-    private Set<BeanDefinition> scanPackages(AnnotationMetadata importingClassMetadata, ClassPathBeanDefinitionScanner scanner) {
+    private Set<BeanDefinition> scanPackages(ClassPathBeanDefinitionScanner scanner) {
         List<String> packages = new ArrayList<>();
-        if (StringUtils.isNotBlank(serverPackages)) {
-            String[] basePackages = serverPackages.split(",");//(String[]) annotationAttributes.get("packages");
-            if (basePackages.length > 0) {
-                packages.addAll(Arrays.asList(basePackages));
+        List<RemoteServer> remoteServers = this.grpcProperties.getRemoteServers();
+        if (remoteServers != null && !CollectionUtils.isEmpty(remoteServers)) {
+            String basePackages = remoteServers.parallelStream().map(e -> e.getServerPackages()).collect(Collectors.joining(","));
+            if (StringUtils.isNotBlank(basePackages)) {
+                packages.addAll(Arrays.asList(basePackages.split(",")));
             }
         }
-        //}
         Set<BeanDefinition> beanDefinitions = new HashSet<>();
         if (CollectionUtils.isEmpty(packages)) {
             return beanDefinitions;
@@ -119,10 +115,6 @@ public class ExternalGrpcServiceScannerRegistrar implements BeanFactoryAware, Im
         }
         if (StringUtils.isNotBlank(realPath)) {
             Properties properties = getProperties(realPath);
-            String property = properties.getProperty("spring.grpc.serverPackages", null);
-            Boolean server = Boolean.parseBoolean(properties.getProperty("spring.grpc.enable", "false"));
-            this.server = server;
-            this.serverPackages = property;
             this.grpcProperties=registerBeanGrpcProperties(properties);
         }
 
@@ -151,7 +143,6 @@ public class ExternalGrpcServiceScannerRegistrar implements BeanFactoryAware, Im
     private GrpcProperties registerBeanGrpcProperties(Properties properties)  {
         GrpcProperties grpcProperties = new GrpcProperties();
         grpcProperties.setPort(Integer.parseInt(properties.getProperty("spring.grpc.port", "0")));
-        grpcProperties.setEnable(Boolean.parseBoolean(properties.getProperty("spring.grpc.enable", "true")));
         grpcProperties.setClientInterceptorName(properties.getProperty("spring.grpc.clientInterceptorName", ""));
         boolean clientIntercept = StringUtils.isNotBlank(grpcProperties.getClientInterceptorName());
         if (clientIntercept){

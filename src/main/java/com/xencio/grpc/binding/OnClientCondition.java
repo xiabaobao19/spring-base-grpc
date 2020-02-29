@@ -28,9 +28,8 @@ public class OnClientCondition implements Condition {
 
     @Override
     public boolean matches(ConditionContext conditionContext, AnnotatedTypeMetadata annotatedTypeMetadata) {
-        Boolean enable = Boolean.parseBoolean(PropertiesValueUtils.getRealValue("spring.grpc.enable"));
         String serversValue = PropertiesValueUtils.getRealValue("spring.grpc.servers");
-        if (enable && StringUtils.isNotBlank(serversValue)) {
+        if (StringUtils.isNotBlank(serversValue)) {
             return true;
         }
         return false;

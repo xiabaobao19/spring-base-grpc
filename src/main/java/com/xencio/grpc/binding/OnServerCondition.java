@@ -14,9 +14,8 @@ import org.springframework.core.type.AnnotatedTypeMetadata;
 public class OnServerCondition implements Condition {
     @Override
     public boolean matches(ConditionContext conditionContext, AnnotatedTypeMetadata annotatedTypeMetadata) {
-        Boolean enable = Boolean.parseBoolean(PropertiesValueUtils.getRealValue("spring.grpc.enable"));
         String portValue = PropertiesValueUtils.getRealValue("spring.grpc.port");
-        if (enable && StringUtils.isNotBlank(portValue)) {
+        if (StringUtils.isNotBlank(portValue)) {
             return true;
         }
         return false;

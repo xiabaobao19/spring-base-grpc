@@ -36,6 +36,6 @@ public class RemoteServer {
     /**
      * 服务器 序列化
      */
-    private Integer serializeTypeValue = 2;
+    private Integer serializeTypeValue = 1;
 
 }
