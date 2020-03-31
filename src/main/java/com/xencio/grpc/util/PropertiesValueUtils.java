@@ -20,7 +20,7 @@ import java.util.Properties;
 @Slf4j
 public class PropertiesValueUtils {
 
-    private static final String SETTINGS_FILE = "/**/application.properties,/**/application.yml,/**/application.yaml";
+    private static final String SETTINGS_FILE = "application.properties,application.yml,application.yaml";
 
     public static String getRealValue(String propertiesKey){
         String[] split = SETTINGS_FILE.split(",");
@@ -30,11 +30,15 @@ public class PropertiesValueUtils {
         ResourcePatternResolver resourceLoader = new PathMatchingResourcePatternResolver();
         for (String s : appList) {
             try {
-                Resource[] resources = resourceLoader.getResources(s);
-                if (resources != null && resources.length > 0) {
-                    realPath = s;
+                Resource[] resources = resourceLoader.getResources("classpath*:**/"+s);
+                if (resources != null && resources.length >0) {
+                    boolean exists = resources[0].exists();
+                    if (exists) {
+                        realPath = s;
+                        break;
+                    }
                 }
-            } catch (IOException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         }

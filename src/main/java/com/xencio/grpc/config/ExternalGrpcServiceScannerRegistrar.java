@@ -15,6 +15,7 @@ import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.config.BeanDefinition;
+import org.springframework.beans.factory.config.PropertyPlaceholderConfigurer;
 import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
@@ -26,6 +27,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.io.support.ResourcePatternResolver;
+import org.springframework.core.io.support.ResourcePatternUtils;
 import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.util.CollectionUtils;
 
@@ -52,7 +54,7 @@ public class ExternalGrpcServiceScannerRegistrar implements BeanFactoryAware, Im
     private GrpcProperties grpcProperties;
 
 
-    private static final String SETTINGS_FILE = "/**/application.properties,/**/application.yml,/**/application.yaml";
+    private static final String SETTINGS_FILE = "application.properties,application.yml,application.yaml";
 
     //将BeanFactoryAware 的beanFactory 暴露出来 用于填充 特定注解的bean
     @Override
@@ -105,11 +107,15 @@ public class ExternalGrpcServiceScannerRegistrar implements BeanFactoryAware, Im
         ResourcePatternResolver resourceLoader = new PathMatchingResourcePatternResolver();
         for (String s : appList) {
             try {
-                Resource[] resources = resourceLoader.getResources(s);
-                if (resources != null && resources.length > 0) {
-                    realPath = s;
+                Resource[] resources = resourceLoader.getResources("classpath*:**/"+s);
+                if (resources != null && resources.length>0) {
+                    boolean exists = resources[0].exists();
+                    if (exists) {
+                        realPath = s;
+                        break;
+                    }
                 }
-            } catch (IOException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         }

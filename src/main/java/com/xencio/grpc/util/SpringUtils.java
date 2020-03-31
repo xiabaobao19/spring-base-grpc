@@ -32,7 +32,7 @@ public class SpringUtils implements ApplicationContextAware {
         return applicationContext.getBeansOfType(baseType);
     }
 
-    public  <T> T getBean(Class<T> requiredType) throws BeansException {
+    public static <T> T getBean(Class<T> requiredType) throws BeansException {
         return applicationContext.getBean(requiredType);
     }
 

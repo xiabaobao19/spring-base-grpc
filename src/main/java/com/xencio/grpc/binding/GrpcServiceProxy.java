@@ -48,7 +48,7 @@ public class GrpcServiceProxy<T> implements InvocationHandler {
                 return false;
             }
         }).collect(Collectors.toList());
-        if (!CollectionUtils.isEmpty(servers) && servers.size() == 1) {
+        if (!CollectionUtils.isEmpty(servers)) {
             RemoteServer remoteServer = servers.get(0);
             String server = remoteServer.getServer();
             GrpcRequest request = new GrpcRequest();

@@ -113,6 +113,14 @@
 
   </dependencies>
 
+  <developers>
+    <developer>
+      <name>xiabaobao</name>
+      <email>xiabaobao@xencio.com</email>
+      <url>https://github.com/xiabaobao19/spring-base-grpc</url>
+    </developer>
+  </developers>
+
   <build>
     <extensions>
       <extension>

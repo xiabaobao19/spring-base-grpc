@@ -72,7 +72,7 @@ public class CommonService extends CommonServiceGrpc.CommonServiceImplBase {
             return serviceBeanMap.get(clazz);
         }
         try {
-            Object bean = springUtils.getBean(clazz);
+            Object bean = SpringUtils.getBean(clazz);
             serviceBeanMap.put(clazz, bean);
             return bean;
         } catch (BeansException e) {
