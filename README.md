@@ -14,7 +14,8 @@
    4. scanPackages 注解所在包 
    5. serverPackages:grpc调用接口所在包
    6. serializeTypeValue:grpc通信时用的序列化类型，默认 1 也就是sofa-hessian
-   7. **对于采用负载均衡（负载均衡默认采用客户端 轮询策略），则需要addresses 配置多组ip port**
+   7. token token 验证
+   8. **对于采用负载均衡（负载均衡默认采用客户端 轮询策略），则需要addresses 配置多组ip port**
 * spring.grpc.clientInterceptorName: com.xencio.grpc.interceptor.MyClientInterceptor
    1. 此参数为 客户端拦截器，在发送grpc 通信之前，可自主定义
 ## server
