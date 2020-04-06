@@ -5,7 +5,6 @@ import com.xencio.grpc.config.GrpcProperties;
 import com.xencio.grpc.config.RemoteServer;
 import com.xencio.grpc.service.SerializeService;
 import io.grpc.*;
-import io.grpc.internal.DnsNameResolverProvider;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.CollectionUtils;
 
@@ -13,7 +12,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 @Slf4j
 public class GrpcClient {
@@ -43,30 +41,30 @@ public class GrpcClient {
     public void init(){
         List<RemoteServer> remoteServers = grpcProperties.getRemoteServers();
         if (!CollectionUtils.isEmpty(remoteServers)) {
-            Map<String, List<RemoteServer>> groupServers = remoteServers.parallelStream().collect(Collectors.groupingBy(RemoteServer::getServer));
-            groupServers.forEach((k,v)->{
+            remoteServers.forEach(e->{
                 ManagedChannel channel = ManagedChannelBuilder.forTarget("local")
                         .defaultLoadBalancingPolicy("round_robin")
-                        .nameResolverFactory(new MyNameResolverProvider(v))
+                        .nameResolverFactory(new MyNameResolverProvider(e))
                         .enableRetry()
                         .maxRetryAttempts(5)
                         .idleTimeout(30, TimeUnit.SECONDS)
                         .usePlaintext().build();
+
                 if (clientInterceptor != null){
                     Channel newChannel = ClientInterceptors.intercept(channel, clientInterceptor);
-                    serverMap.put(k, new ServerContext(newChannel, serializeService));
+                    serverMap.put(e.getServer(), new ServerContext(newChannel, serializeService));
                 }else {
-                    Class clazz = grpcProperties.getClientInterceptor();
+                    Class clazz = e.getClientInterceptor();
                     if (clazz == null) {
-                        serverMap.put(k, new ServerContext(channel, serializeService));
+                        serverMap.put(e.getServer(), new ServerContext(channel, serializeService));
                     }else {
                         try {
                             ClientInterceptor interceptor = (ClientInterceptor) clazz.newInstance();
                             Channel newChannel = ClientInterceptors.intercept(channel, interceptor);
-                            serverMap.put(k, new ServerContext(newChannel, serializeService));
-                        } catch (InstantiationException | IllegalAccessException e) {
+                            serverMap.put(e.getServer(), new ServerContext(newChannel, serializeService));
+                        } catch (InstantiationException | IllegalAccessException el) {
                             log.warn("ClientInterceptor cannot use, ignoring...");
-                            serverMap.put(k, new ServerContext(channel, serializeService));
+                            serverMap.put(e.getServer(), new ServerContext(channel, serializeService));
                         }
                     }
                 }

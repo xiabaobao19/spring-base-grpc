@@ -23,5 +23,9 @@ public class GrpcRequest implements Serializable {
      * service 方法参数
      */
     private Object[] args;
+    /**
+     * token
+     */
+    private String token;
 
 }

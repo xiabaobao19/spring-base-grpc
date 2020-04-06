@@ -18,7 +18,7 @@ import java.util.Set;
  */
 @Slf4j
 public  class ProxyUtil {
-    public static void registerBeans(BeanFactory beanFactory, Set<BeanDefinition> beanDefinitions) {
+    public static void registerBeans(BeanFactory beanFactory, Set<BeanDefinition> beanDefinitions,String server) {
         for (BeanDefinition beanDefinition : beanDefinitions) {
             String className = beanDefinition.getBeanClassName();
             if (StringUtils.isEmpty(className)) {
@@ -28,7 +28,7 @@ public  class ProxyUtil {
                 // 创建代理类
                 Class<?> target = Class.forName(className);
                 Object invoker = new Object();
-                InvocationHandler invocationHandler = new GrpcServiceProxy<>(target, invoker);
+                InvocationHandler invocationHandler = new GrpcServiceProxy<>(target, invoker,server);
                 Object proxy = Proxy.newProxyInstance(GrpcAutoConfiguration.class.getClassLoader(), new Class[]{target}, invocationHandler);
 
                 // 注册到 Spring 容器

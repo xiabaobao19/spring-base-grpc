@@ -9,11 +9,11 @@ import com.xencio.grpc.service.GrpcRequest;
 import com.xencio.grpc.service.GrpcResponse;
 import com.xencio.grpc.util.SpringUtils;
 import org.springframework.cglib.proxy.InvocationHandler;
-import org.springframework.util.CollectionUtils;
 
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class GrpcServiceProxy<T> implements InvocationHandler {
@@ -22,9 +22,12 @@ public class GrpcServiceProxy<T> implements InvocationHandler {
 
     private Object invoker;
 
-    public GrpcServiceProxy(Class<T> grpcService, Object invoker) {
+    private String server;
+
+    public GrpcServiceProxy(Class<T> grpcService, Object invoker,String server) {
         this.grpcService = grpcService;
         this.invoker = invoker;
+        this.server=server;
     }
 
     @Override
@@ -40,37 +43,28 @@ public class GrpcServiceProxy<T> implements InvocationHandler {
             return proxy == another;
         }
         List<RemoteServer> remoteServers = SpringUtils.getBean("myGrpcServers");
-        List<RemoteServer> servers = remoteServers.parallelStream().filter(e -> {
-            List<String> serverClassNames = e.getServerClassNames();
-            if (serverClassNames != null && !CollectionUtils.isEmpty(serverClassNames)) {
-                return serverClassNames.contains(className);
-            } else {
-                return false;
-            }
-        }).collect(Collectors.toList());
-        if (!CollectionUtils.isEmpty(servers)) {
-            RemoteServer remoteServer = servers.get(0);
-            String server = remoteServer.getServer();
-            GrpcRequest request = new GrpcRequest();
-            request.setClazz(className);
-            request.setMethod(methodName);
-            request.setArgs(args);
-            Integer serializeTypeValue = remoteServer.getSerializeTypeValue();
-            SerializeType serializeType = SerializeType.getSerializeTypeByValue(serializeTypeValue);
-            GrpcResponse response = GrpcClient.connect(server).handle(serializeType, request);
-            if (GrpcResponseStatus.ERROR.getCode() == response.getStatus()) {
-                Throwable throwable = response.getException();
-                GrpcException exception = new GrpcException(throwable.getClass().getName() + ": " + throwable.getMessage());
-                StackTraceElement[] exceptionStackTrace = exception.getStackTrace();
-                StackTraceElement[] responseStackTrace = response.getStackTrace();
-                StackTraceElement[] allStackTrace = Arrays.copyOf(exceptionStackTrace, exceptionStackTrace.length + responseStackTrace.length);
-                System.arraycopy(responseStackTrace, 0, allStackTrace, exceptionStackTrace.length, responseStackTrace.length);
-                exception.setStackTrace(allStackTrace);
-                throw exception;
-            }
-            return response.getResult();
+        Map<String, List<RemoteServer>> serverMap = remoteServers.parallelStream().collect(Collectors.groupingBy(RemoteServer::getServer));
+        RemoteServer remoteServer = serverMap.get(server).get(0);
+        GrpcRequest request = new GrpcRequest();
+        request.setClazz(className);
+        request.setMethod(methodName);
+        request.setArgs(args);
+        request.setToken(remoteServer.getToken());
+        Integer serializeTypeValue = remoteServer.getSerializeTypeValue();
+        SerializeType serializeType = SerializeType.getSerializeTypeByValue(serializeTypeValue);
+        GrpcResponse response = GrpcClient.connect(server).handle(serializeType, request);
+        if (GrpcResponseStatus.ERROR.getCode() == response.getStatus()) {
+            Throwable throwable = response.getException();
+            GrpcException exception = new GrpcException(throwable.getClass().getName() + ": " + throwable.getMessage());
+            StackTraceElement[] exceptionStackTrace = exception.getStackTrace();
+            StackTraceElement[] responseStackTrace = response.getStackTrace();
+            StackTraceElement[] allStackTrace = Arrays.copyOf(exceptionStackTrace, exceptionStackTrace.length + responseStackTrace.length);
+            System.arraycopy(responseStackTrace, 0, allStackTrace, exceptionStackTrace.length, responseStackTrace.length);
+            exception.setStackTrace(allStackTrace);
+            throw exception;
         }
-        return null;
+        return response.getResult();
     }
+
 
 }

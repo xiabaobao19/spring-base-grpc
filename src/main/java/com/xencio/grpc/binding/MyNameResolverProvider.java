@@ -1,13 +1,11 @@
 package com.xencio.grpc.binding;
 
 import com.xencio.grpc.config.RemoteServer;
-import io.grpc.Attributes;
 import io.grpc.NameResolver;
 import io.grpc.NameResolverProvider;
 
 import javax.annotation.Nullable;
 import java.net.URI;
-import java.util.List;
 
 /**
  * @author xiabaobao
@@ -15,9 +13,9 @@ import java.util.List;
  */
 public class MyNameResolverProvider extends NameResolverProvider {
 
-    List<RemoteServer> remoteServers;
+    RemoteServer remoteServers;
 
-    public MyNameResolverProvider(List<RemoteServer> remoteServers){
+    public MyNameResolverProvider(RemoteServer remoteServers){
         this.remoteServers =remoteServers;
     }
     // 服务是否可用

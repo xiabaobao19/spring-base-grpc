@@ -9,7 +9,7 @@ import io.grpc.*;
 public class MyClientInterceptor implements ClientInterceptor {
     //客户端header的key
     private static final Metadata.Key<String> CUSTOM_HEADER_KEY =
-            Metadata.Key.of("clientHeader", Metadata.ASCII_STRING_MARSHALLER);
+            Metadata.Key.of("clientToken", Metadata.ASCII_STRING_MARSHALLER);
 
     @Override
     public <ReqT, RespT> ClientCall<ReqT, RespT> interceptCall(MethodDescriptor<ReqT, RespT> method, CallOptions callOptions, Channel next) {

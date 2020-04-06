@@ -6,6 +6,7 @@ package com.xencio.grpc.config;
  */
 
 import com.alibaba.fastjson.JSONArray;
+import com.xencio.grpc.annotation.MyGrpcService;
 import com.xencio.grpc.util.ClassPathGrpcServiceScanner;
 import com.xencio.grpc.util.MyTypeFilter;
 import com.xencio.grpc.util.ProxyUtil;
@@ -15,7 +16,6 @@ import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.beans.factory.config.PropertyPlaceholderConfigurer;
 import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
@@ -27,17 +27,16 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.io.support.ResourcePatternResolver;
-import org.springframework.core.io.support.ResourcePatternUtils;
 import org.springframework.core.type.AnnotationMetadata;
+import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.util.CollectionUtils;
 
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
- * 手动扫描 @GrpcService 注解的接口，
+ * 手动扫描 @MyGrpcService 注解的接口，
  * 生成动态代理类，注入到 Spring 容器，
  * 因为引入了@GrpcServiceScan  @GrpcserviceScan
  * 中包含@Import  ExternalGrpcServiceScannerRegistrar
@@ -69,35 +68,69 @@ public class ExternalGrpcServiceScannerRegistrar implements BeanFactoryAware, Im
         setServerPackages();
     }
 
-    //将@GrpcService 标注的class 的bean 注入到spring容器
+    //将@MyGrpcService 标注的class 的bean 注入到spring容器
     @Override
     public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
         ((DefaultListableBeanFactory) beanFactory).registerSingleton("grpcProperties", this.grpcProperties);
-            ClassPathBeanDefinitionScanner scanner = new ClassPathGrpcServiceScanner(registry);
-            scanner.setResourceLoader(this.resourceLoader);
-            scanner.addIncludeFilter(new MyTypeFilter());
-            Set<BeanDefinition> beanDefinitions = scanPackages(scanner);//扫描器获取的包含又@GrpcService 注解的类
-            ProxyUtil.registerBeans(beanFactory, beanDefinitions);
+        ClassPathBeanDefinitionScanner scanner = new ClassPathGrpcServiceScanner(registry);
+        scanner.setResourceLoader(this.resourceLoader);
+        scanner.addIncludeFilter(new MyTypeFilter());
+
+        ClassPathBeanDefinitionScanner ascanner = new ClassPathGrpcServiceScanner(registry);
+        ascanner.setResourceLoader(this.resourceLoader);
+        ascanner.addIncludeFilter(new AnnotationTypeFilter(MyGrpcService.class));
+        Map<String, Set<BeanDefinition>> beanDefinitions = scanPackages(scanner, ascanner);//扫描器获取的包含又@MyGrpcService 注解的类
+        beanDefinitions.forEach((server,beans)->ProxyUtil.registerBeans(beanFactory, beans,server));
     }
 
     /**
      * 包扫描
      */
-    private Set<BeanDefinition> scanPackages(ClassPathBeanDefinitionScanner scanner) {
-        List<String> packages = new ArrayList<>();
+    private Map<String, Set<BeanDefinition>> scanPackages(ClassPathBeanDefinitionScanner scanner, ClassPathBeanDefinitionScanner ascanner) {
+        Map<String, List<String>> baseServerPackage = new HashMap<>();
+        Map<String, List<String>> anaServerPackage = new HashMap<>();
+        Map<String, Set<BeanDefinition>> serverBeans = new HashMap<>();
         List<RemoteServer> remoteServers = this.grpcProperties.getRemoteServers();
         if (remoteServers != null && !CollectionUtils.isEmpty(remoteServers)) {
-            String basePackages = remoteServers.parallelStream().map(e -> e.getServerPackages()).collect(Collectors.joining(","));
-            if (StringUtils.isNotBlank(basePackages)) {
-                packages.addAll(Arrays.asList(basePackages.split(",")));
-            }
+            remoteServers.forEach(e -> {
+                String server = e.getServer();
+                String serverPackages = e.getServerPackages();
+                String scanPackages = e.getScanPackages();
+                serverBeans.put(e.getServer(),new HashSet<>());
+                if (StringUtils.isNotBlank(serverPackages)) {
+                    List<String> basePackages = Arrays.asList(serverPackages.split(","));
+                    baseServerPackage.put(server, basePackages);
+                }
+                if (StringUtils.isNotBlank(scanPackages)) {
+                    List<String> anaPackages = Arrays.asList(scanPackages.split(","));
+                    anaServerPackage.put(server, anaPackages);
+                }
+
+            });
         }
-        Set<BeanDefinition> beanDefinitions = new HashSet<>();
-        if (CollectionUtils.isEmpty(packages)) {
-            return beanDefinitions;
+        if (CollectionUtils.isEmpty(baseServerPackage) && CollectionUtils.isEmpty(anaServerPackage)) {
+            return serverBeans;
         }
-        packages.forEach(pack -> beanDefinitions.addAll(scanner.findCandidateComponents(pack)));
-        return beanDefinitions;
+        baseServerPackage.forEach((k, pack) -> {
+            Set<BeanDefinition> beanDefinitions = new HashSet<>();
+            pack.forEach(ep -> beanDefinitions.addAll(scanner.findCandidateComponents(ep)));
+            serverBeans.put(k, beanDefinitions);
+        });
+        anaServerPackage.forEach((k, pack) ->
+            pack.forEach(ep -> {
+                Set<BeanDefinition> beans = ascanner.findCandidateComponents(ep);
+                beans.forEach(e -> {
+                    try {
+                        MyGrpcService annotation = Class.forName(e.getBeanClassName()).getAnnotation(MyGrpcService.class);
+                        String server = annotation.server();
+                        serverBeans.get(server).add(e);
+                    } catch (ClassNotFoundException e1) {
+                        e1.printStackTrace();
+                    }
+                });
+            })
+        );
+        return serverBeans;
     }
 
     public void setServerPackages() {
@@ -107,8 +140,8 @@ public class ExternalGrpcServiceScannerRegistrar implements BeanFactoryAware, Im
         ResourcePatternResolver resourceLoader = new PathMatchingResourcePatternResolver();
         for (String s : appList) {
             try {
-                Resource[] resources = resourceLoader.getResources("classpath*:**/"+s);
-                if (resources != null && resources.length>0) {
+                Resource[] resources = resourceLoader.getResources("classpath*:**/" + s);
+                if (resources != null && resources.length > 0) {
                     boolean exists = resources[0].exists();
                     if (exists) {
                         realPath = s;
@@ -121,7 +154,7 @@ public class ExternalGrpcServiceScannerRegistrar implements BeanFactoryAware, Im
         }
         if (StringUtils.isNotBlank(realPath)) {
             Properties properties = getProperties(realPath);
-            this.grpcProperties=registerBeanGrpcProperties(properties);
+            this.grpcProperties = registerBeanGrpcProperties(properties);
         }
 
     }
@@ -146,22 +179,15 @@ public class ExternalGrpcServiceScannerRegistrar implements BeanFactoryAware, Im
         return properties;
     }
 
-    private GrpcProperties registerBeanGrpcProperties(Properties properties)  {
+    private GrpcProperties registerBeanGrpcProperties(Properties properties) {
         GrpcProperties grpcProperties = new GrpcProperties();
         grpcProperties.setPort(Integer.parseInt(properties.getProperty("spring.grpc.port", "0")));
-        grpcProperties.setClientInterceptorName(properties.getProperty("spring.grpc.clientInterceptorName", ""));
-        boolean clientIntercept = StringUtils.isNotBlank(grpcProperties.getClientInterceptorName());
-        if (clientIntercept){
-            try {
-                Class<?> aClass = Class.forName(grpcProperties.getClientInterceptorName());
-                grpcProperties.setClientInterceptor(aClass);
-            } catch (ClassNotFoundException e) {
-                log.info("获取clientInterceptName 失败");
-            }
-        }
+
+        grpcProperties.setToken(properties.getProperty("spring.grpc.token", ""));
+        grpcProperties.setServerInterceptorName(properties.getProperty("spring.grpc.serverInterceptorName", ""));
         grpcProperties.setServerInterceptorName(properties.getProperty("spring.grpc.serverInterceptorName", ""));
         boolean serverIntercept = StringUtils.isNotBlank(grpcProperties.getServerInterceptorName());
-        if (serverIntercept){
+        if (serverIntercept) {
             try {
                 Class<?> aClass = Class.forName(grpcProperties.getServerInterceptorName());
                 grpcProperties.setServerInterceptor(aClass);
@@ -175,6 +201,7 @@ public class ExternalGrpcServiceScannerRegistrar implements BeanFactoryAware, Im
             if (remoteServers != null) {
                 remoteServers.forEach(e -> {
                     String serverPackages = e.getServerPackages();
+                    String clientInterceptorName = e.getClientInterceptorName();
                     List<String> clas = new ArrayList<>();
                     if (StringUtils.isNotBlank(serverPackages)) {
                         String[] packages = serverPackages.split(",");
@@ -186,6 +213,14 @@ public class ExternalGrpcServiceScannerRegistrar implements BeanFactoryAware, Im
                             beanDefinitions.forEach(eb -> clas.add(eb.getBeanClassName()));
                         }
                         e.setServerClassNames(clas);
+                    }
+                    if (StringUtils.isNotBlank(clientInterceptorName)) {
+                        try {
+                            Class<?> aClass = Class.forName(clientInterceptorName);
+                            e.setClientInterceptor(aClass);
+                        } catch (ClassNotFoundException ec) {
+                            log.info("获取serverInterceptName 失败");
+                        }
                     }
                 });
             }

@@ -1,12 +1,14 @@
 package com.xencio.grpc;
 
 import com.xencio.grpc.config.GrpcProperties;
+import com.xencio.grpc.interceptor.MyServerInterceptor;
 import com.xencio.grpc.service.CommonService;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.ServerInterceptor;
 import io.grpc.ServerInterceptors;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.DisposableBean;
 
 import java.util.Optional;
@@ -42,6 +44,10 @@ public class GrpcServer implements DisposableBean {
      */
     public void start() throws Exception{
         int port = grpcProperties.getPort();
+        String token = grpcProperties.getToken();
+        if (StringUtils.isNotBlank(token)){
+            serverInterceptor = new MyServerInterceptor(token);
+        }
         if (serverInterceptor != null){
             server = ServerBuilder.forPort(port).addService(ServerInterceptors.intercept(commonService, serverInterceptor)).build().start();
         }else {

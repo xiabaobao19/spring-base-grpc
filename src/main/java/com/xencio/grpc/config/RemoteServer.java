@@ -15,15 +15,11 @@ public class RemoteServer {
      */
     private String server;
 
-    /**
-     * 主机地址
-     */
-    private String host;
 
     /**
-     * 服务端口号
+     * 服务的 ip 与 port
      */
-    private int port;
+    private List<GrpcAddress> addresses;
 
     /**
      * 调用服务的公共 类接口名
@@ -37,5 +33,30 @@ public class RemoteServer {
      * 服务器 序列化
      */
     private Integer serializeTypeValue = 1;
+
+    /**
+     * 是否开启注释扫描  @MyGrpcService
+     */
+    private Boolean enableScan;
+
+    /**
+     * 扫描路径 默认
+     */
+    private String scanPackages;
+
+    /**
+     * 用于 验证token
+     */
+    private String token;
+
+    /**
+     * client interceptor
+     */
+    private String clientInterceptorName;
+
+    /**
+     * client interceptor
+     */
+    private Class clientInterceptor;
 
 }

@@ -1,8 +1,6 @@
 package com.xencio.grpc.config;
 
 import lombok.Data;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Configuration;
 
 import java.util.List;
 
@@ -25,23 +23,17 @@ public class GrpcProperties {
     private List<RemoteServer> remoteServers;
 
     /**
-     * client interceptor
-     */
-    private Class clientInterceptor;
-
-    /**
      * server interceptor
      */
     private Class serverInterceptor;
 
     /**
-     * client interceptor
-     */
-    private String clientInterceptorName;
-
-    /**
      * server interceptor
      */
     private String serverInterceptorName;
+    /**
+     * 服务端配置 token 参数
+     */
+    private String token;
 
 }

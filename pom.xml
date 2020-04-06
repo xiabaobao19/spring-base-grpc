@@ -4,6 +4,7 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
+
   <groupId>com.xencio</groupId>
   <artifactId>spring-base-grpc</artifactId>
   <version>1.0-SNAPSHOT</version>
@@ -14,7 +15,7 @@
 
   <properties>
     <spring-boot.version>2.1.8.RELEASE</spring-boot.version>
-    <grpc.version>1.22.1</grpc.version>
+    <grpc.version>1.28.0</grpc.version>
   </properties>
 
   <dependencyManagement>
@@ -163,14 +164,10 @@
   <distributionManagement>
 
     <repository>
-      <id>rdc-releases</id>
-      <url>https://repo.rdc.aliyun.com/repository/73801-release-g4ZTFl/</url>
+      <!--此名称要和.m2/settings.xml中设置的ID一致  url为私服地址-->
+      <id>xencio</id>
+      <url>https://maven.xencio.com/repository/maven-releases/</url>
     </repository>
-
-    <snapshotRepository>
-      <id>rdc-snapshots</id>
-      <url>https://repo.rdc.aliyun.com/repository/73801-snapshot-e8LM6K/</url>
-    </snapshotRepository>
 
   </distributionManagement>
 </project>
