@@ -160,14 +160,4 @@
     </plugins>
   </build>
 
-  <!-- Maven 仓库 -->
-  <distributionManagement>
-
-    <repository>
-      <!--此名称要和.m2/settings.xml中设置的ID一致  url为私服地址-->
-      <id>xencio</id>
-      <url>https://maven.xencio.com/repository/maven-releases/</url>
-    </repository>
-
-  </distributionManagement>
 </project>
