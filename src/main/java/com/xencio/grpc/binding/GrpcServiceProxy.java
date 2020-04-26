@@ -1,5 +1,6 @@
 package com.xencio.grpc.binding;
 
+import com.alibaba.fastjson.JSON;
 import com.xencio.grpc.GrpcClient;
 import com.xencio.grpc.config.RemoteServer;
 import com.xencio.grpc.constant.GrpcResponseStatus;
@@ -14,6 +15,7 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class GrpcServiceProxy<T> implements InvocationHandler {
@@ -33,6 +35,7 @@ public class GrpcServiceProxy<T> implements InvocationHandler {
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
         String methodName = method.getName();
+        Class<?> returnType = method.getReturnType();
         String className = grpcService.getName();
         if ("toString".equals(methodName) && args.length == 0) {
             return className + "@" + invoker.hashCode();
@@ -63,7 +66,12 @@ public class GrpcServiceProxy<T> implements InvocationHandler {
             exception.setStackTrace(allStackTrace);
             throw exception;
         }
-        return response.getResult();
+        Object result = response.getResult();
+        if (!Objects.isNull(result) && Void.TYPE != returnType){
+            String s = JSON.toJSONString(result);
+            result = JSON.parseObject(s, returnType);
+        }
+        return result;
     }
 
 
