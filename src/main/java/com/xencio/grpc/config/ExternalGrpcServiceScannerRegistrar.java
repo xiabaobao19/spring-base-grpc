@@ -16,23 +16,19 @@ import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
+import org.springframework.context.EnvironmentAware;
 import org.springframework.context.ResourceLoaderAware;
 import org.springframework.context.annotation.ClassPathBeanDefinitionScanner;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.context.support.GenericApplicationContext;
-import org.springframework.core.io.Resource;
+import org.springframework.core.env.Environment;
 import org.springframework.core.io.ResourceLoader;
-import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
-import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.util.CollectionUtils;
 
-import java.io.FileInputStream;
-import java.io.IOException;
 import java.util.*;
 
 /**
@@ -43,7 +39,7 @@ import java.util.*;
  * 所以才会在初始化的时候 初始化此类
  */
 @Slf4j
-public class ExternalGrpcServiceScannerRegistrar implements BeanFactoryAware, ImportBeanDefinitionRegistrar, ResourceLoaderAware {
+public class ExternalGrpcServiceScannerRegistrar implements EnvironmentAware, BeanFactoryAware, ImportBeanDefinitionRegistrar, ResourceLoaderAware {
 
     private BeanFactory beanFactory;
 
@@ -52,8 +48,12 @@ public class ExternalGrpcServiceScannerRegistrar implements BeanFactoryAware, Im
 
     private GrpcProperties grpcProperties;
 
+    private Environment environment;
 
-    private static final String SETTINGS_FILE = "application.properties,application.yml,application.yaml";
+    @Override
+    public void setEnvironment(Environment environment) {
+        this.environment = environment;
+    }
 
     //将BeanFactoryAware 的beanFactory 暴露出来 用于填充 特定注解的bean
     @Override
@@ -68,6 +68,7 @@ public class ExternalGrpcServiceScannerRegistrar implements BeanFactoryAware, Im
         setServerPackages();
     }
 
+
     //将@MyGrpcService 标注的class 的bean 注入到spring容器
     @Override
     public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
@@ -80,7 +81,7 @@ public class ExternalGrpcServiceScannerRegistrar implements BeanFactoryAware, Im
         ascanner.setResourceLoader(this.resourceLoader);
         ascanner.addIncludeFilter(new AnnotationTypeFilter(MyGrpcService.class));
         Map<String, Set<BeanDefinition>> beanDefinitions = scanPackages(scanner, ascanner);//扫描器获取的包含又@MyGrpcService 注解的类
-        beanDefinitions.forEach((server,beans)->ProxyUtil.registerBeans(beanFactory, beans,server));
+        beanDefinitions.forEach((server, beans) -> ProxyUtil.registerBeans(beanFactory, beans, server));
     }
 
     /**
@@ -96,7 +97,7 @@ public class ExternalGrpcServiceScannerRegistrar implements BeanFactoryAware, Im
                 String server = e.getServer();
                 String serverPackages = e.getServerPackages();
                 String scanPackages = e.getScanPackages();
-                serverBeans.put(e.getServer(),new HashSet<>());
+                serverBeans.put(e.getServer(), new HashSet<>());
                 if (StringUtils.isNotBlank(serverPackages)) {
                     List<String> basePackages = Arrays.asList(serverPackages.split(","));
                     baseServerPackage.put(server, basePackages);
@@ -117,75 +118,34 @@ public class ExternalGrpcServiceScannerRegistrar implements BeanFactoryAware, Im
             serverBeans.put(k, beanDefinitions);
         });
         anaServerPackage.forEach((k, pack) ->
-            pack.forEach(ep -> {
-                Set<BeanDefinition> beans = ascanner.findCandidateComponents(ep);
-                beans.forEach(e -> {
-                    try {
-                        MyGrpcService annotation = Class.forName(e.getBeanClassName()).getAnnotation(MyGrpcService.class);
-                        String server = annotation.server();
-                        serverBeans.get(server).add(e);
-                    } catch (ClassNotFoundException e1) {
-                        e1.printStackTrace();
-                    }
-                });
-            })
+                pack.forEach(ep -> {
+                    Set<BeanDefinition> beans = ascanner.findCandidateComponents(ep);
+                    beans.forEach(e -> {
+                        try {
+                            MyGrpcService annotation = Class.forName(e.getBeanClassName()).getAnnotation(MyGrpcService.class);
+                            String server = annotation.server();
+                            serverBeans.get(server).add(e);
+                        } catch (ClassNotFoundException e1) {
+                            e1.printStackTrace();
+                        }
+                    });
+                })
         );
         return serverBeans;
     }
 
     public void setServerPackages() {
-        String[] split = SETTINGS_FILE.split(",");
-        List<String> appList = Arrays.asList(split);
-        String realPath = null;
-        ResourcePatternResolver resourceLoader = new PathMatchingResourcePatternResolver();
-        for (String s : appList) {
-            try {
-                Resource[] resources = resourceLoader.getResources("classpath*:**/" + s);
-                if (resources != null && resources.length > 0) {
-                    boolean exists = resources[0].exists();
-                    if (exists) {
-                        realPath = s;
-                        break;
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-        if (StringUtils.isNotBlank(realPath)) {
-            Properties properties = getProperties(realPath);
-            this.grpcProperties = registerBeanGrpcProperties(properties);
-        }
-
+        this.grpcProperties = registerBeanGrpcProperties();
     }
 
-    public Properties getProperties(String path) {
-        Properties properties = new Properties();
-        try {
-            ResourcePatternResolver resourceLoader = new PathMatchingResourcePatternResolver();
-            Resource[] resources = resourceLoader.getResources(path);
-            if (path.endsWith(".yml") || path.endsWith(".yaml")) {
-                YamlPropertiesFactoryBean yaml = new YamlPropertiesFactoryBean();
-                yaml.setResources(resources[0]);
-                properties = yaml.getObject();
-            } else {
-                FileInputStream inputStream = new FileInputStream(resources[0].getFile());
-                properties.load(inputStream);
-                inputStream.close();
-            }
-        } catch (IOException e) {
-            log.info("加载 yml 失败");
-        }
-        return properties;
-    }
 
-    private GrpcProperties registerBeanGrpcProperties(Properties properties) {
+    private GrpcProperties registerBeanGrpcProperties() {
         GrpcProperties grpcProperties = new GrpcProperties();
-        grpcProperties.setPort(Integer.parseInt(properties.getProperty("spring.grpc.port", "0")));
+        grpcProperties.setPort(Integer.parseInt(environment.getProperty("spring.grpc.port", "0")));
 
-        grpcProperties.setToken(properties.getProperty("spring.grpc.token", ""));
-        grpcProperties.setServerInterceptorName(properties.getProperty("spring.grpc.serverInterceptorName", ""));
-        grpcProperties.setServerInterceptorName(properties.getProperty("spring.grpc.serverInterceptorName", ""));
+        grpcProperties.setToken(environment.getProperty("spring.grpc.token", ""));
+        grpcProperties.setServerInterceptorName(environment.getProperty("spring.grpc.serverInterceptorName", ""));
+        grpcProperties.setServerInterceptorName(environment.getProperty("spring.grpc.serverInterceptorName", ""));
         boolean serverIntercept = StringUtils.isNotBlank(grpcProperties.getServerInterceptorName());
         if (serverIntercept) {
             try {
@@ -195,7 +155,7 @@ public class ExternalGrpcServiceScannerRegistrar implements BeanFactoryAware, Im
                 log.info("获取clientInterceptName 失败");
             }
         }
-        String servers = properties.getProperty("spring.grpc.servers", "");
+        String servers = environment.getProperty("spring.grpc.servers", "");
         if (StringUtils.isNotBlank(servers)) {
             List<RemoteServer> remoteServers = JSONArray.parseArray(servers, RemoteServer.class);
             if (remoteServers != null) {
@@ -228,4 +188,6 @@ public class ExternalGrpcServiceScannerRegistrar implements BeanFactoryAware, Im
         }
         return grpcProperties;
     }
+
+
 }

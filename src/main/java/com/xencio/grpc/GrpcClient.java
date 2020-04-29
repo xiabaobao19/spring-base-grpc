@@ -3,7 +3,7 @@ package com.xencio.grpc;
 import com.xencio.grpc.binding.MyNameResolverProvider;
 import com.xencio.grpc.config.GrpcProperties;
 import com.xencio.grpc.config.RemoteServer;
-import com.xencio.grpc.service.SerializeService;
+import com.xencio.grpc.service.MyGrpcSerializeService;
 import io.grpc.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.CollectionUtils;
@@ -20,16 +20,16 @@ public class GrpcClient {
 
     private final GrpcProperties grpcProperties;
 
-    private final SerializeService serializeService;
+    private final MyGrpcSerializeService serializeService;
 
     private ClientInterceptor clientInterceptor;
 
-    public GrpcClient(GrpcProperties grpcProperties, SerializeService serializeService) {
+    public GrpcClient(GrpcProperties grpcProperties, MyGrpcSerializeService serializeService) {
         this.grpcProperties = grpcProperties;
         this.serializeService = serializeService;
     }
 
-    public GrpcClient(GrpcProperties grpcProperties, SerializeService serializeService, ClientInterceptor clientInterceptor) {
+    public GrpcClient(GrpcProperties grpcProperties, MyGrpcSerializeService serializeService, ClientInterceptor clientInterceptor) {
         this.grpcProperties = grpcProperties;
         this.serializeService = serializeService;
         this.clientInterceptor = clientInterceptor;

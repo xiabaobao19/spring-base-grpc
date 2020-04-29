@@ -3,7 +3,7 @@ package com.xencio.grpc.service;
 import com.xencio.rpc.GrpcService;
 import com.google.protobuf.ByteString;
 
-public interface SerializeService {
+public interface MyGrpcSerializeService {
 
     /**
      * 序列化

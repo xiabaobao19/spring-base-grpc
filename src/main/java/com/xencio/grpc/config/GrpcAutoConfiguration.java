@@ -5,11 +5,11 @@ import com.xencio.grpc.GrpcServer;
 import com.xencio.grpc.binding.OnClientCondition;
 import com.xencio.grpc.binding.OnServerCondition;
 import com.xencio.grpc.service.CommonService;
-import com.xencio.grpc.service.SerializeService;
+import com.xencio.grpc.service.MyGrpcSerializeService;
 import com.xencio.grpc.service.impl.SofaHessianSerializeService;
 import com.xencio.grpc.util.SpringUtils;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowire;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Conditional;
@@ -29,7 +29,7 @@ public class GrpcAutoConfiguration {
     /**
      * 全局 properties 序列化/反序列化
      */
-    @Bean(autowire = Autowire.BY_NAME,name = "myGrpcServers")
+    @Bean(name = "myGrpcServers")
     public List<RemoteServer> myGrpcServers() {
         List<RemoteServer> remoteServers = grpcProperties.getRemoteServers();
         return remoteServers;
@@ -44,8 +44,8 @@ public class GrpcAutoConfiguration {
     /**
      * 全局 RPC 序列化/反序列化
      */
-    @Bean
-    public SerializeService serializeService() {
+    @Bean(name = "mySerializeService")
+    public MyGrpcSerializeService serializeService() {
         return new SofaHessianSerializeService();
     }
 
@@ -53,7 +53,7 @@ public class GrpcAutoConfiguration {
      * PRC 服务调用
      */
     @Bean
-    public CommonService commonService(SerializeService serializeService) {
+    public CommonService commonService(@Qualifier(value = "mySerializeService") MyGrpcSerializeService serializeService) {
         return new CommonService(serializeService);
     }
 
@@ -73,7 +73,7 @@ public class GrpcAutoConfiguration {
      */
     @Bean
     @Conditional({OnClientCondition.class})
-    public GrpcClient grpcClient(SerializeService serializeService) {
+    public GrpcClient grpcClient(MyGrpcSerializeService serializeService) {
         GrpcClient client = new GrpcClient(grpcProperties, serializeService);
         client.init();
         return client;

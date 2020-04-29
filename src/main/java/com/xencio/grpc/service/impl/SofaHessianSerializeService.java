@@ -3,7 +3,7 @@ package com.xencio.grpc.service.impl;
 import com.xencio.grpc.exception.GrpcException;
 import com.xencio.grpc.service.GrpcRequest;
 import com.xencio.grpc.service.GrpcResponse;
-import com.xencio.grpc.service.SerializeService;
+import com.xencio.grpc.service.MyGrpcSerializeService;
 import com.xencio.rpc.GrpcService;
 import com.caucho.hessian.io.Hessian2Input;
 import com.caucho.hessian.io.Hessian2Output;
@@ -22,7 +22,7 @@ import java.util.Arrays;
  * 参考：
  * https://github.com/alipay/sofa-rpc/blob/master/extension-impl/codec-sofa-hessian/src/main/java/com/alipay/sofa/rpc/codec/sofahessian/SofaHessianSerializer.java
  */
-public class SofaHessianSerializeService implements SerializeService {
+public class SofaHessianSerializeService implements MyGrpcSerializeService {
 
     private SerializerFactory serializerFactory = new SerializerFactory();
 

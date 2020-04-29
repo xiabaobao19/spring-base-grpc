@@ -1,6 +1,6 @@
 package com.xencio.grpc.service.impl;
 
-import com.xencio.grpc.service.SerializeService;
+import com.xencio.grpc.service.MyGrpcSerializeService;
 import com.xencio.grpc.service.GrpcRequest;
 import com.xencio.grpc.service.GrpcResponse;
 import com.xencio.grpc.util.ProtobufUtils;
@@ -10,7 +10,7 @@ import com.google.protobuf.ByteString;
 /**
  * ProtoStuff 序列化/反序列化工具
  */
-public class ProtoStuffSerializeService implements SerializeService {
+public class ProtoStuffSerializeService implements MyGrpcSerializeService {
 
     @Override
     public GrpcRequest deserialize(GrpcService.Request request) {

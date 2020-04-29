@@ -1,16 +1,15 @@
 package com.xencio.grpc.service;
 
+import com.google.protobuf.ByteString;
 import com.xencio.grpc.util.SerializeUtils;
 import com.xencio.grpc.util.SpringUtils;
 import com.xencio.rpc.CommonServiceGrpc;
 import com.xencio.rpc.GrpcService;
-import com.google.protobuf.ByteString;
 import io.grpc.stub.StreamObserver;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.reflect.MethodUtils;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cglib.reflect.FastClass;
 import org.springframework.cglib.reflect.FastMethod;
 
@@ -24,19 +23,16 @@ public class CommonService extends CommonServiceGrpc.CommonServiceImplBase {
 
     private Map<Class, Object> serviceBeanMap = new ConcurrentHashMap<>();
 
-    @Value("#{grpcSpringUtils}")
-    private SpringUtils springUtils;
+    private final MyGrpcSerializeService defaultSerializationService;
 
-    private final SerializeService defaultSerializationService;
-
-    public CommonService(SerializeService serializeService) {
+    public CommonService(MyGrpcSerializeService serializeService) {
         this.defaultSerializationService = serializeService;
     }
 
     @Override
     public void handle(GrpcService.Request request, StreamObserver<GrpcService.Response> responseObserver) {
         int serialize = request.getSerialize();
-        SerializeService serializeService = SerializeUtils.getSerializeService(serialize, defaultSerializationService);
+        MyGrpcSerializeService serializeService = SerializeUtils.getSerializeService(serialize, defaultSerializationService);
         GrpcRequest grpcRequest = serializeService.deserialize(request);
         GrpcResponse response = new GrpcResponse();
         try {

@@ -2,7 +2,7 @@ package com.xencio.grpc.service.impl;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.parser.Feature;
-import com.xencio.grpc.service.SerializeService;
+import com.xencio.grpc.service.MyGrpcSerializeService;
 import com.xencio.grpc.service.GrpcRequest;
 import com.xencio.grpc.service.GrpcResponse;
 import com.xencio.rpc.GrpcService;
@@ -11,7 +11,7 @@ import com.google.protobuf.ByteString;
 /**
  * FastJSON 序列化/反序列化工具
  */
-public class FastJSONSerializeService implements SerializeService {
+public class FastJSONSerializeService implements MyGrpcSerializeService {
 
     @Override
     public ByteString serialize(GrpcResponse response) {
