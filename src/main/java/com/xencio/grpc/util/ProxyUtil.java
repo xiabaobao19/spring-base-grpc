@@ -17,8 +17,8 @@ import java.util.Set;
  * @date 2020/2/17 8:49
  */
 @Slf4j
-public  class ProxyUtil {
-    public static void registerBeans(BeanFactory beanFactory, Set<BeanDefinition> beanDefinitions,String server) {
+public class ProxyUtil {
+    public static void registerBeans(BeanFactory beanFactory, Set<BeanDefinition> beanDefinitions, String server) {
         for (BeanDefinition beanDefinition : beanDefinitions) {
             String className = beanDefinition.getBeanClassName();
             if (StringUtils.isEmpty(className)) {
@@ -28,12 +28,11 @@ public  class ProxyUtil {
                 // 创建代理类
                 Class<?> target = Class.forName(className);
                 Object invoker = new Object();
-                InvocationHandler invocationHandler = new GrpcServiceProxy<>(target, invoker,server);
+                InvocationHandler invocationHandler = new GrpcServiceProxy<>(target, invoker, server);
                 Object proxy = Proxy.newProxyInstance(GrpcAutoConfiguration.class.getClassLoader(), new Class[]{target}, invocationHandler);
 
                 // 注册到 Spring 容器
-                String beanName = ClassNameUtils.beanName(className);
-                ((DefaultListableBeanFactory) beanFactory).registerSingleton(beanName, proxy);
+                ((DefaultListableBeanFactory) beanFactory).registerSingleton(className, proxy);
             } catch (ClassNotFoundException e) {
                 log.warn("class not found : " + className);
             }
