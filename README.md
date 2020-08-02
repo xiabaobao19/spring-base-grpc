@@ -2,6 +2,7 @@
 ## 此项目 来源 https://github.com/ChinaSilence/spring-boot-starter-grpc 更改如下
 * 更改了项目类型，兼容spring 项目
 * 将原先服务的发现形式从 注解方式更改为 配置发现
+* 更加适用于 中小型企业在发展过程中项目处于部分功能需要以微服务方式的呈现，但是如果引入springcloud 或者 dubbo 会太过庞大，此插件更适用于过渡阶段，更小更简洁
 ## 此项目主要使用方式
 ### client
 * 配置 
